@@ -1,0 +1,50 @@
+1. Посмотреть документацию к API GitHub, разобраться как вывести список репозиториев для конкретного пользователя, сохранить JSON-вывод в файле *.json.
+
+
+
+import json
+import requests
+from pprint import pprint
+user_login = 'evgueniaz'
+url = "https://api.github.com/users/" + user_login + "/repos"
+
+response = requests.get(str(url))
+j_data = response.json()
+# pprint(j_data)
+with open('my_file.jsn', 'a+') as f:
+    json.dump(j_data, f)
+
+for elem in j_data:
+    repo_name = elem.get('name', None)
+    pprint(repo_name)
+
+
+
+
+2. Изучить список открытых API. Найти среди них любое, требующее авторизацию (любого типа). Выполнить запросы к нему, пройдя авторизацию. Ответ сервера записать в файл.
+
+
+Поиск книг на GOOGLE BOOKS, в названии которых есть «flowers»:
+
+
+
+import requests
+from pprint import pprint
+key = 'flowers'
+my_params = {
+    'q': key,
+    'appid': 'Password'
+}
+url = "https://www.googleapis.com/books/v1/volumes"
+
+response = requests.get(url, params=my_params)
+j_data = response.json()
+# pprint(j_data)
+
+for elem in j_data.get("items"):
+    volume_info = elem.get('volumeInfo', None)
+    title = volume_info.get('title')
+    author = volume_info.get('authors')
+
+    pprint(f'Книга: {title} - Автор(ы): {author}')
+
