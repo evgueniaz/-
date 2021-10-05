@@ -1,0 +1,69 @@
+# https://spb.hh.ru/search/vacancy?area=2&fromSearchLine=true&st=searchVacancy&text=python
+
+import requests
+from bs4 import BeautifulSoup as bs
+from pprint import pprint
+
+url = 'https://spb.hh.ru/'
+full_url = 'https://spb.hh.ru/search/vacancy/'
+params = {'area': '2',
+          'fromSearchLine': 'True',
+          'st': 'searchVacancy',
+          'text': 'python'}
+headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.36'}
+
+while True:
+    response = requests.get(full_url, params=params, headers=headers)
+
+    soup = bs(response.text, 'html.parser')
+
+    vacancies_list = soup.find_all('div', attrs={'class': 'vacancy-serp-item'})
+
+    vacancies = []
+    # vacancy_wedge_min, vacancy_wedge_max = None, None
+
+
+    for vacancy in vacancies_list:
+        vacancy_data = {}
+        vacancy_info = vacancy.find('div', attrs={'class': 'vacancy-serp-item__info'})
+        vacancy_name = vacancy_info.text
+
+        vacancy_link = vacancy.find('a', attrs={'href': True})
+        link = vacancy_link.get('href')
+
+
+        vacancy_wedge = vacancy.find('span', attrs={'data-qa': "vacancy-serp__vacancy-compensation"}).text
+        vacancy_wedge = vacancy_wedge.replace('\u202f', '')
+        vacancy_wedge = vacancy_wedge.split()
+        wedge_currency = vacancy_wedge[-1]
+        # Except:
+        #     vacancy_wedge = None
+
+        if vacancy_wedge[0] == 'от':
+            vacancy_wedge_min = int(vacancy_wedge[1])
+        if vacancy_wedge[0] == 'до':
+            vacancy_wedge_max = int(vacancy_wedge[1])
+        if vacancy_wedge[0].isnumeric():
+            vacancy_wedge_min = int(vacancy_wedge[0])
+            vacancy_wedge_max = int(vacancy_wedge[2])
+
+        # Except:
+        #     vacancy_wedge = None
+
+        vacancy_data['vacancy_name'] = vacancy_name
+        vacancy_data['link'] = link
+        vacancy_data['min_wedge'] = vacancy_wedge_min
+        vacancy_data['max_wedge'] = vacancy_wedge_max
+        vacancy_data['wedge_currency'] = wedge_currency
+
+        vacancies.append(vacancy_data)
+
+    next = soup.find('a', attrs={'data-qa': "pager-next"})
+    if next:
+        full_url = url + next['href']
+    else:
+        break
+
+pprint(vacancies)
+
+
