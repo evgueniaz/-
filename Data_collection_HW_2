@@ -1,4 +1,5 @@
 # https://spb.hh.ru/search/vacancy?area=2&fromSearchLine=true&st=searchVacancy&text=python
+# https://spb.hh.ru/search/vacancy?st=searchVacancy&text=python&area=2&salary=&currency_code=RUR&experience=doesNotMatter&order_by=relevance&search_period=0&items_on_page=20&no_magic=true&L_save_area=true
 
 import requests
 from bs4 import BeautifulSoup as bs
@@ -14,56 +15,61 @@ headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 
 while True:
     response = requests.get(full_url, params=params, headers=headers)
-
     soup = bs(response.text, 'html.parser')
 
-    vacancies_list = soup.find_all('div', attrs={'class': 'vacancy-serp-item'})
+    vacancies_list = soup.find('div', attrs={'class': 'vacancy-serp-item'})
+    
+    if not vacancies_list or not response.ok:
+        break
 
     vacancies = []
-    # vacancy_wedge_min, vacancy_wedge_max = None, None
-
 
     for vacancy in vacancies_list:
         vacancy_data = {}
-        vacancy_info = vacancy.find('div', attrs={'class': 'vacancy-serp-item__info'})
+        vacancy_info = vacancy.find('a', attrs={'data-qa': 'vacancy-serp__vacancy-title'})
         vacancy_name = vacancy_info.text
 
         vacancy_link = vacancy.find('a', attrs={'href': True})
         link = vacancy_link.get('href')
 
+        # vacancy_wedge = None
 
-        vacancy_wedge = vacancy.find('span', attrs={'data-qa': "vacancy-serp__vacancy-compensation"}).text
-        vacancy_wedge = vacancy_wedge.replace('\u202f', '')
-        vacancy_wedge = vacancy_wedge.split()
-        wedge_currency = vacancy_wedge[-1]
-        # Except:
-        #     vacancy_wedge = None
+        vacancy_wedge = vacancy.find('span', attrs={'data-qa': 'vacancy-serp__vacancy-compensation'})
+        if vacancy_wedge:
+            wedge_amount = vacancy_wedge.text
+            wedge_amount = wedge_amount.replace('\u202f', '')
+            wedge_amount = wedge_amount.split()
+            wedge_currency = wedge_amount[-1]
 
-        if vacancy_wedge[0] == 'от':
-            vacancy_wedge_min = int(vacancy_wedge[1])
-        if vacancy_wedge[0] == 'до':
-            vacancy_wedge_max = int(vacancy_wedge[1])
-        if vacancy_wedge[0].isnumeric():
-            vacancy_wedge_min = int(vacancy_wedge[0])
-            vacancy_wedge_max = int(vacancy_wedge[2])
+            if wedge_amount[0] == 'от':
+                vacancy_wedge_min = int(wedge_amount[1])
+                vacancy_wedge_max = None
+            if wedge_amount[0] == 'до':
+                vacancy_wedge_max = int(wedge_amount[1])
+                vacancy_wedge_min = None
+            if wedge_amount[0].isnumeric():
+                vacancy_wedge_min = int(wedge_amount[0])
+                vacancy_wedge_max = int(wedge_amount[2])
 
-        # Except:
-        #     vacancy_wedge = None
+        else:
+            vacancy_wedge_max = None
+            vacancy_wedge_min = None
+            wedge_currency = None
 
         vacancy_data['vacancy_name'] = vacancy_name
         vacancy_data['link'] = link
         vacancy_data['min_wedge'] = vacancy_wedge_min
         vacancy_data['max_wedge'] = vacancy_wedge_max
         vacancy_data['wedge_currency'] = wedge_currency
+        vacancy_data['vacancy_site'] = url
 
         vacancies.append(vacancy_data)
-
-    next = soup.find('a', attrs={'data-qa': "pager-next"})
-    if next:
-        full_url = url + next['href']
-    else:
-        break
-
 pprint(vacancies)
+    # next = soup.find('a', attrs={'data-qa': "pager-next"})
+    # if next:
+    #     full_url = url + next['href']
+    # else:
+    #     break
 
+# pprint(vacancies)
 
